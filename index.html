@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>闇炶彶閰掑簵缁忚惀鏃ユ姤鐢熸垚鍣?/title>
+<title>霞菲酒店经营日报生成器</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
@@ -408,148 +408,149 @@ body {
 
 <div class="container">
   <div class="header">
-    <h1>馃彣 鏉窞闇炶彶鍏 路 缁忚惀鏃ユ姤鐢熸垚鍣?/h1>
-    <div class="subtitle">濉叆鏁版嵁 鈫?涓€閿敓鎴愭棩鎶?/div>
+    <h1>🏨 杭州霞菲公馆 · 经营日报生成器</h1>
+    <div class="subtitle">填入数据 → 一键生成日报</div>
   </div>
 
-  <!-- 浣跨敤鎻愮ず -->
+  <!-- 使用提示 -->
   <div class="card" id="usageTip" style="background:#f0f9ff;border:1px solid #bae6fd;display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <strong>馃挕 浣跨敤璇存槑</strong>
+        <strong>💡 使用说明</strong>
         <div style="font-size:13px;color:#0369a1;margin-top:4px;">
-          1. 涓婁紶涓ゅ紶缁忚惀鏁版嵁鎴浘 鈫?鑷姩璇嗗埆濉叆<br>
-          2. 妫€鏌ュ苟淇璇嗗埆缁撴灉 鈫?鎵嬪姩琛ュ～鍓╀綑瀛楁<br>
-          3. 鐐瑰嚮銆岀敓鎴愭棩鎶ャ€嶁啋 鎴浘瀵煎嚭 + 澶嶅埗鎶ュ鏂囧瓧<br>
-          4. 鎵€鏈夋暟鎹嚜鍔ㄤ繚瀛樺湪娴忚鍣ㄤ腑锛屼笅娆℃墦寮€杩樺湪<br>
-          <span id="tipProtocol" style="display:none;color:#dc2626;">鈿狅笍 OCR 鍔熻兘闇€閫氳繃 http:// 鎵撳紑锛岀洿鎺ュ弻鍑绘枃浠跺彲鑳芥棤娉曡瘑鍒浘鐗?/span>
+          1. 上传两张经营数据截图 → 自动识别填入<br>
+          2. 检查并修正识别结果 → 手动补填剩余字段<br>
+          3. 点击「生成日报」→ 截图导出 + 复制报备文字<br>
+          4. 所有数据自动保存在浏览器中，下次打开还在<br>
+          <span id="tipProtocol" style="display:none;color:#dc2626;">⚠️ OCR 功能需通过 http:// 打开，直接双击文件可能无法识别图片</span>
         </div>
       </div>
-      <button onclick="document.getElementById('usageTip').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280;">鉁?/button>
+      <button onclick="document.getElementById('usageTip').style.display='none'" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280;">✕</button>
     </div>
   </div>
 
-  <!-- ====== 鍖哄煙 0: 鏃ユ湡閫夋嫨 ====== -->
+  <!-- ====== 区域 0: 日期选择 ====== -->
   <div class="card">
-    <div class="card-title"><span class="icon">馃搮</span> 鏃ユ姤鏃ユ湡</div>
+    <div class="card-title"><span class="icon">📅</span> 日报日期</div>
     <div class="date-row">
-      <label>閫夋嫨鏃ユ湡锛堟姤鍛婂墠涓€澶╂暟鎹級锛?/label>
+      <label>选择日期（报告前一天数据）：</label>
       <input type="date" id="reportDate">
       <div class="date-info">
-        <span>馃搯 鏃ユ湡鍙凤細<strong id="dayOfMonth">-</strong></span>
-        <span>馃搳 宸茶繃澶╂暟锛?strong id="dayOfYear">-</strong></span>
-        <span>鈴?鏃堕棿杩涘害锛?strong id="timeProgress">-</strong></span>
+        <span>📆 日期号：<strong id="dayOfMonth">-</strong></span>
+        <span>📊 已过天数：<strong id="dayOfYear">-</strong></span>
+        <span>⏱ 时间进度：<strong id="timeProgress">-</strong></span>
       </div>
     </div>
   </div>
 
-  <!-- ====== 鍖哄煙 1: 鎴浘涓婁紶 ====== -->
+  <!-- ====== 区域 1: 截图上传 ====== -->
   <div class="card">
-    <div class="card-title"><span class="icon">馃摲</span> 鎴浘涓婁紶锛圤CR 鑷姩璇嗗埆锛?/div>
+    <div class="card-title"><span class="icon">📷</span> 截图上传（OCR 自动识别）</div>
     <div class="upload-row">
       <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e3a5f;">浠婂勾鏁版嵁锛?6骞达級</div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e3a5f;">今年数据（26年）</div>
         <div class="upload-zone" id="uploadThisYear" onclick="document.getElementById('fileThisYear').click()">
-          <div class="upload-icon">馃摛</div>
-          <div class="upload-text">鐐瑰嚮鎴栨嫋鎷戒笂浼犱粖骞寸粡钀ユ暟鎹埅鍥?/div>
-          <div class="upload-hint">鏀寔 PNG / JPG</div>
+          <div class="upload-icon">📤</div>
+          <div class="upload-text">点击或拖拽上传今年经营数据截图</div>
+          <div class="upload-hint">支持 PNG / JPG</div>
           <img class="preview" id="previewThisYear" style="display:none">
-          <div class="ocr-status idle" id="ocrStatusThisYear">绛夊緟涓婁紶</div>
+          <div class="ocr-status idle" id="ocrStatusThisYear">等待上传</div>
         </div>
         <input type="file" id="fileThisYear" accept="image/*" style="display:none">
       </div>
       <div>
-        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e3a5f;">25骞村悓鏈熸暟鎹?/div>
+        <div style="font-weight:600;font-size:13px;margin-bottom:8px;color:#1e3a5f;">25年同期数据</div>
         <div class="upload-zone" id="uploadLastYear" onclick="document.getElementById('fileLastYear').click()">
-          <div class="upload-icon">馃摛</div>
-          <div class="upload-text">鐐瑰嚮鎴栨嫋鎷戒笂浼?5骞村悓鏈熺粡钀ユ暟鎹埅鍥?/div>
-          <div class="upload-hint">鏀寔 PNG / JPG</div>
+          <div class="upload-icon">📤</div>
+          <div class="upload-text">点击或拖拽上传25年同期经营数据截图</div>
+          <div class="upload-hint">支持 PNG / JPG</div>
           <img class="preview" id="previewLastYear" style="display:none">
-          <div class="ocr-status idle" id="ocrStatusLastYear">绛夊緟涓婁紶</div>
+          <div class="ocr-status idle" id="ocrStatusLastYear">等待上传</div>
         </div>
         <input type="file" id="fileLastYear" accept="image/*" style="display:none">
       </div>
     </div>
     <div class="btn-row">
-      <button class="btn btn-outline btn-sm" onclick="clearOCR()">娓呴櫎涓婁紶</button>
+      <button class="btn btn-outline btn-sm" onclick="clearOCR()">清除上传</button>
     </div>
   </div>
 
-  <!-- ====== 鍖哄煙 2: 鏁版嵁濉叆 ====== -->
+  <!-- ====== 区域 2: 数据填入 ====== -->
   <div class="card">
-    <div class="card-title"><span class="icon">鉁忥笍</span> 鏁版嵁濉叆</div>
+    <div class="card-title"><span class="icon">✏️</span> 数据填入</div>
     <div class="legend">
-      <span><span class="dot green"></span> 缁忚惀鏁版嵁锛堜粠鎴浘璇诲彇鍚庡～鍏ワ級</span>
-      <span><span class="dot yellow"></span> 闇€鎵嬪姩杈撳叆</span>
-      <span style="margin-left:auto;">鎵€鏈夊瓧娈靛潎鍙洿鎺ョ紪杈?/span>
+      <span><span class="dot green"></span> 经营数据（从截图读取后填入）</span>
+      <span><span class="dot yellow"></span> 需手动输入</span>
+      <span style="margin-left:auto;">所有字段均可直接编辑</span>
     </div>
 
-    <!-- 1A: 浠婂勾鏁版嵁 -->
+    <!-- 1A: 今年数据 -->
     <div class="form-section">
-      <div class="form-section-title">馃搳 浠婂勾鏁版嵁锛?6骞达級</div>
+      <div class="form-section-title">📊 今年数据（26年）</div>
       <div class="form-grid" id="formThisYear"></div>
     </div>
 
-    <!-- 1B: 25骞村悓鏈熸暟鎹?-->
+    <!-- 1B: 25年同期数据 -->
     <div class="form-section">
-      <div class="form-section-title">馃搮 25骞村悓鏈熸暟鎹?/div>
+      <div class="form-section-title">📅 25年同期数据</div>
       <div class="form-grid" id="formLastYear"></div>
     </div>
 
-    <!-- 1C: 鎵嬪姩杈撳叆 -->
+    <!-- 1C: 手动输入 -->
     <div class="form-section">
-      <div class="form-section-title">馃枈锔?鎵嬪姩杈撳叆</div>
+      <div class="form-section-title">🖊️ 手动输入</div>
       <div class="form-grid" id="formManual"></div>
     </div>
 
-    <!-- 1D: 鍥哄畾鍙傛暟 -->
+    <!-- 1D: 固定参数 -->
     <div class="fixed-params-toggle" onclick="toggleFixedParams()">
-      <span id="fixedParamsArrow">鈻?/span> 鍥哄畾鍙傛暟璁剧疆锛堥绠椼€佹埧闂存暟銆佺洰鏍囩瓑锛屼慨鏀瑰悗鑷姩淇濆瓨锛?    </div>
+      <span id="fixedParamsArrow">▶</span> 固定参数设置（预算、房间数、目标等，修改后自动保存）
+    </div>
     <div class="fixed-params-panel" id="fixedParamsPanel">
       <div class="form-grid" id="formFixed"></div>
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-outline btn-sm" onclick="fillDemoData()">馃搵 濉叆绀轰緥鏁版嵁</button>
-      <button class="btn btn-outline btn-sm" onclick="clearAllData()">馃棏锔?娓呯┖鏁版嵁</button>
+      <button class="btn btn-outline btn-sm" onclick="fillDemoData()">📋 填入示例数据</button>
+      <button class="btn btn-outline btn-sm" onclick="clearAllData()">🗑️ 清空数据</button>
     </div>
   </div>
 
-  <!-- ====== 鍖哄煙 2 & 3: 杈撳嚭缁撴灉 (Tabs) ====== -->
+  <!-- ====== 区域 2 & 3: 输出结果 (Tabs) ====== -->
   <div class="card" id="outputCard" style="display:none;">
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('table')">馃搵 杈撳嚭琛ㄦ牸</button>
-      <button class="tab" onclick="switchTab('report')">馃摑 鎶ュ鏂囧瓧</button>
+      <button class="tab active" onclick="switchTab('table')">📋 输出表格</button>
+      <button class="tab" onclick="switchTab('report')">📝 报备文字</button>
     </div>
 
-    <!-- 杈撳嚭琛ㄦ牸 -->
+    <!-- 输出表格 -->
     <div class="tab-content active" id="tabTable">
       <div style="text-align:center;margin-bottom:12px;">
-        <h3 style="font-size:16px;">鏉窞闇炶彶鍏<span id="outputDateTable"></span>缁忚惀鏃ユ姤</h3>
+        <h3 style="font-size:16px;">杭州霞菲公馆<span id="outputDateTable"></span>经营日报</h3>
       </div>
 
-      <!-- 鏀跺叆鎸囨爣琛?-->
-      <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:8px;">鏀跺叆鎸囨爣</div>
+      <!-- 收入指标表 -->
+      <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:8px;">收入指标</div>
       <div class="output-table-wrapper">
         <table class="output-table" id="incomeTable"></table>
       </div>
 
-      <!-- 缁忚惀鎸囨爣琛?-->
-      <div style="font-weight:700;font-size:13px;color:#374151;margin:20px 0 8px;">缁忚惀鎸囨爣</div>
+      <!-- 经营指标表 -->
+      <div style="font-weight:700;font-size:13px;color:#374151;margin:20px 0 8px;">经营指标</div>
       <div class="output-table-wrapper">
         <table class="output-table" id="bizTable"></table>
       </div>
 
       <div class="btn-row" style="margin-top:16px;">
-        <button class="btn btn-success" onclick="exportImage()">馃摳 瀵煎嚭琛ㄦ牸鎴浘</button>
+        <button class="btn btn-success" onclick="exportImage()">📸 导出表格截图</button>
       </div>
     </div>
 
-    <!-- 鎶ュ鏂囧瓧 -->
+    <!-- 报备文字 -->
     <div class="tab-content" id="tabReport">
       <div class="report-text" id="reportText"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="copyReport()">馃搵 涓€閿鍒舵姤澶囨枃瀛?/button>
+        <button class="btn btn-primary" onclick="copyReport()">📋 一键复制报备文字</button>
       </div>
     </div>
   </div>
@@ -558,84 +559,85 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
-// ==================== 瀛楁瀹氫箟 ====================
+// ==================== 字段定义 ====================
 
 const FIELDS_THIS_YEAR = [
-  { key: 'monthRevenueConfirmed', label: '鏈堢疮鏀跺叆-纭敹(涓?', step: '0.1' },
-  { key: 'monthRevenueAccrual', label: '鏈堢疮鏀跺叆-鏉冭矗(涓?', step: '0.1' },
-  { key: 'yearRevenueConfirmed', label: '骞寸疮鏀跺叆-纭敹(涓?', step: '0.1' },
-  { key: 'yearRevenueAccrual', label: '骞寸疮鏀跺叆-鏉冭矗(涓?', step: '0.1' },
-  { key: 'dailyNewSignDay', label: '鏃ョ-褰撴棩鏂扮(鍚画绉?(闂?', step: '1' },
-  { key: 'dailyNewSignLong', label: '闀跨-褰撴棩鏂扮(鍚画绉?(闂?', step: '1' },
-  { key: 'dailyInRentDay', label: '鏃ョ-褰撴棩鍦ㄧ(闂?', step: '1' },
-  { key: 'dailyInRentLong', label: '闀跨-褰撴棩鍦ㄧ(闂?', step: '1' },
-  { key: 'dailyOccRateDay', label: '鏃ョ-褰撴棩鍑虹鐜?%)', step: '0.1' },
-  { key: 'dailyOccRateLong', label: '闀跨-褰撴棩鍑虹鐜?%)', step: '0.1' },
-  { key: 'monthOccRateDay', label: '鏃ョ-鏈堢疮鍑虹鐜?%)', step: '0.1' },
-  { key: 'monthOccRateLong', label: '闀跨-鏈堢疮鍑虹鐜?%)', step: '0.1' },
-  { key: 'dailyNewAvgPriceDay', label: '鏃ョ-褰撴棩鏂扮鍧囦环(鍏?', step: '1' },
-  { key: 'monthAvgPriceDay', label: '鏃ョ-鏈堢疮绛剧害鍧囦环(鍏?', step: '1' },
-  { key: 'monthAvgPriceLong', label: '闀跨-鏈堢疮绛剧害鍧囦环(鍏?', step: '1' },
+  { key: 'monthRevenueConfirmed', label: '月累收入-确收(万)', step: '0.1' },
+  { key: 'monthRevenueAccrual', label: '月累收入-权责(万)', step: '0.1' },
+  { key: 'yearRevenueConfirmed', label: '年累收入-确收(万)', step: '0.1' },
+  { key: 'yearRevenueAccrual', label: '年累收入-权责(万)', step: '0.1' },
+  { key: 'dailyNewSignDay', label: '日租-当日新签(含续租)(间)', step: '1' },
+  { key: 'dailyNewSignLong', label: '长租-当日新签(含续租)(间)', step: '1' },
+  { key: 'dailyInRentDay', label: '日租-当日在租(间)', step: '1' },
+  { key: 'dailyInRentLong', label: '长租-当日在租(间)', step: '1' },
+  { key: 'dailyOccRateDay', label: '日租-当日出租率(%)', step: '0.1' },
+  { key: 'dailyOccRateLong', label: '长租-当日出租率(%)', step: '0.1' },
+  { key: 'monthOccRateDay', label: '日租-月累出租率(%)', step: '0.1' },
+  { key: 'monthOccRateLong', label: '长租-月累出租率(%)', step: '0.1' },
+  { key: 'dailyNewAvgPriceDay', label: '日租-当日新签均价(元)', step: '1' },
+  { key: 'monthAvgPriceDay', label: '日租-月累签约均价(元)', step: '1' },
+  { key: 'monthAvgPriceLong', label: '长租-月累签约均价(元)', step: '1' },
 ];
 
 const FIELDS_LAST_YEAR = [
-  { key: 'lyMonthRevenueConfirmed', label: '鏈堢疮鏀跺叆-纭敹(涓?', step: '0.1' },
-  { key: 'lyYearRevenueConfirmed', label: '骞寸疮鏀跺叆-纭敹(涓?', step: '0.1' },
-  { key: 'lyMonthAvgPriceDay', label: '鏃ョ-鏈堢疮绛剧害鍧囦环(鍏?', step: '1' },
+  { key: 'lyMonthRevenueConfirmed', label: '月累收入-确收(万)', step: '0.1' },
+  { key: 'lyYearRevenueConfirmed', label: '年累收入-确收(万)', step: '0.1' },
+  { key: 'lyMonthAvgPriceDay', label: '日租-月累签约均价(元)', step: '1' },
 ];
 
 const FIELDS_MANUAL = [
-  { key: 'renewDay', label: '鏃ョ缁鏁?闂?', step: '1', default: 0 },
-  { key: 'renewLong', label: '闀跨缁鏁?闂?', step: '1', default: 0 },
-  { key: 'checkoutDay', label: '鏃ョ閫€鎴挎暟(闂?', step: '1', default: 0 },
-  { key: 'checkoutLong', label: '闀跨閫€鎴挎暟(闂?', step: '1', default: 0 },
-  { key: 'longTargetRooms', label: '闀跨鐩爣鏁?闂?', step: '1', default: 0 },
-  { key: 'longTargetNew', label: '闀跨鏂板鐩爣(缁?', step: '1', default: 0 },
-  { key: 'npiEstimate', label: '棰勪及鏈堝簳NPI(涓?', step: '1', default: 416 },
+  { key: 'renewDay', label: '日租续租数(间)', step: '1', default: 0 },
+  { key: 'renewLong', label: '长租续租数(间)', step: '1', default: 0 },
+  { key: 'checkoutDay', label: '日租退房数(间)', step: '1', default: 0 },
+  { key: 'checkoutLong', label: '长租退房数(间)', step: '1', default: 0 },
+  { key: 'longTargetRooms', label: '长租目标数(间)', step: '1', default: 0 },
+  { key: 'longTargetNew', label: '长租新增目标(组)', step: '1', default: 0 },
+  { key: 'npiEstimate', label: '预估月底NPI(万)', step: '1', default: 416 },
 ];
 
 const FIELDS_FIXED = [
-  { key: 'budgetMonthConfirmed', label: '褰撴湀棰勭畻-纭敹(涓?', step: '0.1', default: 194 },
-  { key: 'budgetMonthAccrual', label: '褰撴湀棰勭畻-鏉冭矗(涓?', step: '0.1', default: 194 },
-  { key: 'budgetYearConfirmed', label: '褰撳勾棰勭畻-纭敹(涓?', step: '0.1', default: 2250.9 },
-  { key: 'budgetYearAccrual', label: '褰撳勾棰勭畻-鏉冭矗(涓?', step: '0.1', default: 2250.9 },
-  { key: 'totalRooms', label: '鎬绘埧闂存暟', step: '1', default: 239 },
-  { key: 'targetOccRateDay', label: '鏈湀鍑虹鐜囩洰鏍?鏃ョ(%)', step: '1', default: 42 },
-  { key: 'targetOccRateLong', label: '鏈湀鍑虹鐜囩洰鏍?闀跨(%)', step: '1', default: 42 },
+  { key: 'budgetMonthConfirmed', label: '当月预算-确收(万)', step: '0.1', default: 194 },
+  { key: 'budgetMonthAccrual', label: '当月预算-权责(万)', step: '0.1', default: 194 },
+  { key: 'budgetYearConfirmed', label: '当年预算-确收(万)', step: '0.1', default: 2250.9 },
+  { key: 'budgetYearAccrual', label: '当年预算-权责(万)', step: '0.1', default: 2250.9 },
+  { key: 'totalRooms', label: '总房间数', step: '1', default: 239 },
+  { key: 'targetOccRateDay', label: '本月出租率目标-日租(%)', step: '1', default: 42 },
+  { key: 'targetOccRateLong', label: '本月出租率目标-长租(%)', step: '1', default: 42 },
 ];
 
-// ==================== 鍒濆鍖?====================
+// ==================== 初始化 ====================
 
 function init() {
-  // 璁剧疆榛樿鏃ユ湡涓烘槰澶╋紙鎶ュ憡鍓嶄竴澶╂暟鎹級
+  // 设置默认日期为昨天（报告前一天数据）
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   document.getElementById('reportDate').valueAsDate = yesterday;
 
-  // 娓叉煋琛ㄥ崟
+  // 渲染表单
   renderForm('formThisYear', FIELDS_THIS_YEAR, 'data-input');
   renderForm('formLastYear', FIELDS_LAST_YEAR, 'data-input');
   renderForm('formManual', FIELDS_MANUAL, 'manual-input');
   renderForm('formFixed', FIELDS_FIXED, '');
 
-  // 鍔犺浇鍥哄畾鍙傛暟
+  // 加载固定参数
   loadFixedParams();
 
-  // 璁剧疆鎵嬪姩杈撳叆榛樿鍊?  FIELDS_MANUAL.forEach(f => {
+  // 设置手动输入默认值
+  FIELDS_MANUAL.forEach(f => {
     if (f.default !== undefined) {
       const el = document.getElementById('inp_' + f.key);
       if (el && el.value === '') el.value = f.default;
     }
   });
 
-  // 鐩戝惉鏃ユ湡鍙樺寲
+  // 监听日期变化
   document.getElementById('reportDate').addEventListener('change', updateDateInfo);
   updateDateInfo();
 
-  // 鐩戝惉鎵€鏈夎緭鍏ュ彉鍖栵紝瀹炴椂鏇存柊杈撳嚭
+  // 监听所有输入变化，实时更新输出
   document.addEventListener('input', debounce(updateOutput, 300));
 
-  // 璁剧疆鎴浘涓婁紶
+  // 设置截图上传
   setupDragDrop('uploadThisYear', 'fileThisYear', handleThisYearUpload);
   setupDragDrop('uploadLastYear', 'fileLastYear', handleLastYearUpload);
   document.getElementById('fileThisYear').addEventListener('change', handleThisYearUpload);
@@ -662,7 +664,7 @@ function updateDateInfo() {
   updateOutput();
 }
 
-// ==================== 琛ㄥ崟娓叉煋 ====================
+// ==================== 表单渲染 ====================
 
 function renderForm(containerId, fields, cssClass) {
   const container = document.getElementById(containerId);
@@ -675,9 +677,9 @@ function renderForm(containerId, fields, cssClass) {
   }).join('');
 }
 
-// ==================== localStorage 鎸佷箙鍖?====================
+// ==================== localStorage 持久化 ====================
 
-// 鍥哄畾鍙傛暟
+// 固定参数
 function loadFixedParams() {
   try {
     const saved = JSON.parse(localStorage.getItem('xiafei_fixed_params') || '{}');
@@ -699,7 +701,8 @@ function saveFixedParams() {
   localStorage.setItem('xiafei_fixed_params', JSON.stringify(data));
 }
 
-// 缁忚惀鏁版嵁锛堜粖骞?25骞?鎵嬪姩杈撳叆锛?function saveFormData() {
+// 经营数据（今年+25年+手动输入）
+function saveFormData() {
   const data = {};
   [...FIELDS_THIS_YEAR, ...FIELDS_LAST_YEAR, ...FIELDS_MANUAL].forEach(f => {
     const el = document.getElementById('inp_' + f.key);
@@ -726,7 +729,7 @@ function loadFormData() {
   } catch(e) {}
 }
 
-// 鑷姩淇濆瓨琛ㄥ崟鏁版嵁
+// 自动保存表单数据
 document.addEventListener('input', function(e) {
   if (e.target.id && e.target.id.startsWith('inp_') && !FIELDS_FIXED.some(f => 'inp_' + f.key === e.target.id)) {
     saveFormData();
@@ -740,10 +743,10 @@ function toggleFixedParams() {
   const panel = document.getElementById('fixedParamsPanel');
   const arrow = document.getElementById('fixedParamsArrow');
   panel.classList.toggle('open');
-  arrow.textContent = panel.classList.contains('open') ? '鈻? : '鈻?;
+  arrow.textContent = panel.classList.contains('open') ? '▼' : '▶';
 }
 
-// ==================== 璇诲彇鎵€鏈夎緭鍏ユ暟鎹?====================
+// ==================== 读取所有输入数据 ====================
 
 function getAllInputData() {
   const data = {};
@@ -766,7 +769,7 @@ function getAllInputData() {
   return data;
 }
 
-// ==================== 璁＄畻寮曟搸 ====================
+// ==================== 计算引擎 ====================
 
 function calculate(data) {
   const d = data.thisYear;
@@ -779,7 +782,7 @@ function calculate(data) {
 
   const timeProgress = (dayOfMonth / 31 * 100);
 
-  // 鏀跺叆鎸囨爣
+  // 收入指标
   const monthBudgetConfirmed = f.budgetMonthConfirmed || 194;
   const monthBudgetAccrual = f.budgetMonthAccrual || 194;
   const yearBudgetConfirmed = f.budgetYearConfirmed || 2250.9;
@@ -795,10 +798,10 @@ function calculate(data) {
   const accrualMonthRate = monthlyTargetAccrual > 0 ? (d.monthRevenueAccrual / monthlyTargetAccrual * 100) : 0;
   const accrualYearRate = yearlyTargetAccrual > 0 ? (d.yearRevenueAccrual / yearlyTargetAccrual * 100) : 0;
 
-  // 鏀跺叆鍚屽簵鍚屾瘮 = 浠婂勾骞寸疮纭敹 / 25骞村悓鏈熷勾绱‘鏀?- 1
+  // 收入同店同比 = 今年年累确收 / 25年同期年累确收 - 1
   const yoyRevenue = ly.lyYearRevenueConfirmed > 0 ? ((d.yearRevenueConfirmed / ly.lyYearRevenueConfirmed - 1) * 100) : 0;
 
-  // 缁忚惀鎸囨爣
+  // 经营指标
   const dailyNewSignDay = Math.max(0, (d.dailyNewSignDay || 0) - (m.renewDay || 0));
   const dailyNewSignLong = Math.max(0, (d.dailyNewSignLong || 0) - (m.renewLong || 0));
 
@@ -810,19 +813,20 @@ function calculate(data) {
   const monthOccRateLong = d.monthOccRateLong || 0;
   const totalMonthOccRate = monthOccRateDay + monthOccRateLong;
 
-  // 鍚屾湡瀵规瘮鍧囦环 = 鏃ョ鏈堢疮绛剧害鍧囦环 / 25骞村悓鏈熸棩绉熸湀绱绾﹀潎浠?- 1
+  // 同期对比均价 = 日租月累签约均价 / 25年同期日租月累签约均价 - 1
   const priceYoY = ly.lyMonthAvgPriceDay > 0 ? ((d.monthAvgPriceDay / ly.lyMonthAvgPriceDay - 1) * 100) : 0;
 
-  // 閫€鎴挎枃妗?  const checkoutDay = m.checkoutDay || 0;
+  // 退房文案
+  const checkoutDay = m.checkoutDay || 0;
   const checkoutLong = m.checkoutLong || 0;
   let checkoutText = '';
   if (checkoutDay === 0 && checkoutLong === 0) {
-    checkoutText = '鏃犻€€';
+    checkoutText = '无退';
   } else {
     const parts = [];
-    if (checkoutDay > 0) parts.push(`鏃ョ閫€${checkoutDay}闂碻);
-    if (checkoutLong > 0) parts.push(`闀跨閫€${checkoutLong}闂碻);
-    checkoutText = parts.join('锛?);
+    if (checkoutDay > 0) parts.push(`日租退${checkoutDay}间`);
+    if (checkoutLong > 0) parts.push(`长租退${checkoutLong}间`);
+    checkoutText = parts.join('，');
   }
 
   return {
@@ -871,7 +875,7 @@ function calculate(data) {
   };
 }
 
-// ==================== 杈撳嚭鏇存柊 ====================
+// ==================== 输出更新 ====================
 
 function updateOutput() {
   const data = getAllInputData();
@@ -879,7 +883,7 @@ function updateOutput() {
 
   const c = calculate(data);
 
-  // 妫€鏌ユ槸鍚︽湁瀹炶川鏁版嵁
+  // 检查是否有实质数据
   const hasData = c.monthRevenueConfirmed > 0 || c.yearRevenueConfirmed > 0 ||
                   c.dailyInRentDay > 0 || c.dailyInRentLong > 0;
 
@@ -892,7 +896,7 @@ function updateOutput() {
   }
 
   const d = new Date(data.date + 'T00:00:00');
-  const dateStr = `${d.getMonth() + 1}鏈?{d.getDate()}鏃;
+  const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`;
   document.getElementById('outputDateTable').textContent = dateStr;
 
   renderIncomeTable(c);
@@ -908,20 +912,20 @@ function renderIncomeTable(c) {
   document.getElementById('incomeTable').innerHTML = `
     <thead>
       <tr>
-        <th>鎸囨爣</th>
-        <th>褰撴湀棰勭畻</th>
-        <th>绱鏀跺叆</th>
-        <th>杈炬垚鐜?/th>
-        <th>褰撳勾棰勭畻</th>
-        <th>绱鏀跺叆</th>
-        <th>杈炬垚鐜?/th>
-        <th>25骞村悓鏈熸湀绱?/th>
-        <th>鏀跺叆鍚屽簵鍚屾瘮</th>
+        <th>指标</th>
+        <th>当月预算</th>
+        <th>累计收入</th>
+        <th>达成率</th>
+        <th>当年预算</th>
+        <th>累计收入</th>
+        <th>达成率</th>
+        <th>25年同期月累</th>
+        <th>收入同店同比</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <th>纭敹</th>
+        <th>确收</th>
         <td>${c.monthBudgetConfirmed}</td>
         <td class="highlight">${c.monthRevenueConfirmed}</td>
         <td class="${rateClass(c.confirmedMonthRate)}">${fmtPct(c.confirmedMonthRate)}</td>
@@ -932,15 +936,15 @@ function renderIncomeTable(c) {
         <td class="${yoyClass(c.yoyRevenue)}">${c.yoyRevenue}%</td>
       </tr>
       <tr>
-        <th>鏉冭矗</th>
+        <th>权责</th>
         <td>${c.monthBudgetAccrual}</td>
         <td class="highlight">${c.monthRevenueAccrual}</td>
         <td class="${rateClass(c.accrualMonthRate)}">${fmtPct(c.accrualMonthRate)}</td>
         <td>${c.yearBudgetAccrual}</td>
         <td class="highlight">${c.yearRevenueAccrual}</td>
         <td class="${rateClass(c.accrualYearRate)}">${fmtPct(c.accrualYearRate)}</td>
-        <td class="empty-cell">鈥?/td>
-        <td class="empty-cell">鈥?/td>
+        <td class="empty-cell">—</td>
+        <td class="empty-cell">—</td>
       </tr>
     </tbody>`;
 }
@@ -954,22 +958,22 @@ function renderBizTable(c) {
   document.getElementById('bizTable').innerHTML = `
     <thead>
       <tr>
-        <th>涓氭€?/th>
-        <th>褰撴棩鏂扮(闂?</th>
-        <th>褰撴棩缁(闂?</th>
-        <th>褰撴棩鍦ㄧ(闂?</th>
-        <th>鎬绘埧闂存暟</th>
-        <th>褰撴棩闂村鍑虹鐜?/th>
-        <th>鏈堢疮闂村鍑虹鐜?/th>
-        <th>褰撴棩鏂扮鍧囦环</th>
-        <th>鏈堢疮绛剧害鍧囦环</th>
-        <th>25骞村悓鏈熸湀绱柊绛惧潎浠?/th>
-        <th>鍚屾湡瀵规瘮</th>
+        <th>业态</th>
+        <th>当日新签(间)</th>
+        <th>当日续租(间)</th>
+        <th>当日在租(间)</th>
+        <th>总房间数</th>
+        <th>当日间夜出租率</th>
+        <th>月累间夜出租率</th>
+        <th>当日新签均价</th>
+        <th>月累签约均价</th>
+        <th>25年同期月累新签均价</th>
+        <th>同期对比</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <th>鏃ョ</th>
+        <th>日租</th>
         <td class="highlight">${c.dailyNewSignDay}</td>
         <td>${c.renewDay}</td>
         <td>${c.dailyInRentDay}</td>
@@ -982,29 +986,29 @@ function renderBizTable(c) {
         <td class="${priceYoYClass}">${c.priceYoY}%</td>
       </tr>
       <tr>
-        <th>闀跨</th>
+        <th>长租</th>
         <td class="highlight">${c.dailyNewSignLong}</td>
         <td>${c.renewLong}</td>
         <td>${c.dailyInRentLong}</td>
         <td>${c.dailyOccRateLong}%</td>
         <td>${c.monthOccRateLong}%</td>
-        <td class="empty-cell">鈥?/td>
+        <td class="empty-cell">—</td>
         <td>${c.monthAvgPriceLong}</td>
-        <td class="empty-cell">鈥?/td>
-        <td class="empty-cell">鈥?/td>
+        <td class="empty-cell">—</td>
+        <td class="empty-cell">—</td>
       </tr>
       <tr style="background:#fef3c7;font-weight:700;">
-        <th>椤圭洰鍚堣</th>
+        <th>项目合计</th>
         <td>${totalNewSign}</td>
         <td>${totalRenew}</td>
         <td>${totalInRent}</td>
-        <td>鈥?/td>
+        <td>—</td>
         <td>${c.totalDailyOccRate}%</td>
         <td>${c.totalMonthOccRate}%</td>
-        <td>鈥?/td>
-        <td>鈥?/td>
-        <td>鈥?/td>
-        <td>鈥?/td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
+        <td>—</td>
       </tr>
     </tbody>`;
 }
@@ -1012,20 +1016,27 @@ function renderBizTable(c) {
 function renderReport(c, dateStr) {
   const targetTotal = c.targetOccRateDay + c.targetOccRateLong;
 
-  const report = `鍚勪綅棰嗗锛岃鏌ユ敹2026骞?{dateStr}鏉窞闇炶彶缁忚惀鏃ユ姤锛?
-鍑虹鐜囪揪鎴愭儏鍐碉細
-鈶犳湰鏈堝嚭绉熺巼鐩爣锛?{targetTotal}%锛?{c.targetOccRateDay}%+${c.targetOccRateLong}%锛?鈶℃湰鏈堟湀绱嚭绉熺巼锛?{c.totalMonthOccRate}%锛堟棩绉?{c.monthOccRateDay}%+闀跨${c.monthOccRateLong}%锛夊洖椤炬棩绉?{c.dailyInRentDay}闂?鈶㈤暱绉熸柊绛剧洰鏍囨暟锛氭湰鏈堥暱绉熺洰鏍囨暟${c.longTargetRooms}闂达紝鏃剁偣鍦ㄧ${c.dailyInRentLong}闂达紝${c.checkoutText}锛屾柊澧炵洰鏍?{c.longTargetNew}缁勩€?
-鏀跺叆杈炬垚鎯呭喌锛?鈶犳湰鏈堢洰鏍囨敹鍏ワ細${c.monthBudgetConfirmed}涓囷紝鏃堕棿杩涘害${c.timeProgress}%
-鈶℃槰鏃ユ湀绱潈璐ｏ細${c.monthRevenueAccrual}涓囷紝鏉冭矗杈炬垚鐜?{c.accrualMonthRate}%
-鈶㈡槰鏃ユ湀绱洖娆撅細${c.monthRevenueConfirmed}涓囷紝鍥炴杈炬垚鐜?{c.confirmedMonthRate}%
-鈶ｆ敹鍏ュ悓搴楀悓姣旓細杈?5骞村悓鏈?{c.yoyRevenue}%
+  const report = `各位领导，请查收2026年${dateStr}杭州霞菲经营日报：
 
-闆嗗洟鍒嗘憡鍓峃PI锛?鈶犻浼版湀搴昇PI锛?{c.npiEstimate}涓?鈶￠浼版湀搴昇PI鍚屽簵鍚屾瘮鎸佸钩銆俙;
+出租率达成情况：
+①本月出租率目标：${targetTotal}%（${c.targetOccRateDay}%+${c.targetOccRateLong}%）
+②本月月累出租率：${c.totalMonthOccRate}%（日租${c.monthOccRateDay}%+长租${c.monthOccRateLong}%）回顾日租${c.dailyInRentDay}间
+③长租新签目标数：本月长租目标数${c.longTargetRooms}间，时点在租${c.dailyInRentLong}间，${c.checkoutText}，新增目标${c.longTargetNew}组。
+
+收入达成情况：
+①本月目标收入：${c.monthBudgetConfirmed}万，时间进度${c.timeProgress}%
+②昨日月累权责：${c.monthRevenueAccrual}万，权责达成率${c.accrualMonthRate}%
+③昨日月累回款：${c.monthRevenueConfirmed}万，回款达成率${c.confirmedMonthRate}%
+④收入同店同比：较25年同期${c.yoyRevenue}%
+
+集团分摊前NPI：
+①预估月底NPI：${c.npiEstimate}万
+②预估月底NPI同店同比持平。`;
 
   document.getElementById('reportText').textContent = report;
 }
 
-// ==================== Tab 鍒囨崲 ====================
+// ==================== Tab 切换 ====================
 
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1040,14 +1051,14 @@ function switchTab(name) {
   }
 }
 
-// ==================== 澶嶅埗 & 瀵煎嚭 ====================
+// ==================== 复制 & 导出 ====================
 
 function copyReport() {
   const text = document.getElementById('reportText').textContent;
   navigator.clipboard.writeText(text).then(() => {
-    showToast('鉁?鎶ュ鏂囧瓧宸插鍒跺埌鍓创鏉?);
+    showToast('✅ 报备文字已复制到剪贴板');
   }).catch(() => {
-    showToast('鉂?澶嶅埗澶辫触锛岃鎵嬪姩閫夋嫨鏂囧瓧澶嶅埗');
+    showToast('❌ 复制失败，请手动选择文字复制');
   });
 }
 
@@ -1056,12 +1067,12 @@ function exportImage() {
   html2canvas(el, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
     const link = document.createElement('a');
     const dateVal = document.getElementById('reportDate').value || 'unknown';
-    link.download = `闇炶彶鏃ユ姤_${dateVal}.png`;
+    link.download = `霞菲日报_${dateVal}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    showToast('馃摳 琛ㄦ牸鎴浘宸蹭笅杞?);
+    showToast('📸 表格截图已下载');
   }).catch(() => {
-    showToast('鉂?鎴浘瀵煎嚭澶辫触锛岃閲嶈瘯');
+    showToast('❌ 截图导出失败，请重试');
   });
 }
 
@@ -1072,7 +1083,7 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
-// ==================== 绀轰緥鏁版嵁 ====================
+// ==================== 示例数据 ====================
 
 function fillDemoData() {
   const demoThisYear = {
@@ -1124,7 +1135,7 @@ function fillDemoData() {
 
   saveFormData();
   updateOutput();
-  showToast('馃搵 绀轰緥鏁版嵁宸插～鍏?);
+  showToast('📋 示例数据已填入');
 }
 
 function clearAllData() {
@@ -1135,10 +1146,10 @@ function clearAllData() {
   clearOCR();
   saveFormData();
   document.getElementById('outputCard').style.display = 'none';
-  showToast('馃棏锔?鏁版嵁宸叉竻绌?);
+  showToast('🗑️ 数据已清空');
 }
 
-// ==================== 鎴浘涓婁紶 & OCR ====================
+// ==================== 截图上传 & OCR ====================
 
 function setupDragDrop(zoneId, fileInputId, handler) {
   const zone = document.getElementById(zoneId);
@@ -1185,7 +1196,7 @@ function showPreview(imgId, file) {
 
 async function runOCR(file, type, statusId) {
   const statusEl = document.getElementById(statusId);
-  statusEl.textContent = '鍔犺浇 OCR 寮曟搸...';
+  statusEl.textContent = '加载 OCR 引擎...';
   statusEl.className = 'ocr-status loading';
 
   try {
@@ -1201,9 +1212,9 @@ async function runOCR(file, type, statusId) {
       logger: m => {
         if (m.status === 'recognizing text') {
           const pct = Math.round(m.progress * 100);
-          statusEl.textContent = `璇嗗埆涓?.. ${pct}%`;
+          statusEl.textContent = `识别中... ${pct}%`;
         } else if (m.status && m.status.includes('loading')) {
-          statusEl.textContent = `鍔犺浇涓?.. ${m.status}`;
+          statusEl.textContent = `加载中... ${m.status}`;
         }
       }
     });
@@ -1212,7 +1223,7 @@ async function runOCR(file, type, statusId) {
 
     console.log('OCR raw text (' + type + '):', text);
 
-    statusEl.textContent = '璇嗗埆瀹屾垚 鉁?;
+    statusEl.textContent = '识别完成 ✓';
     statusEl.className = 'ocr-status done';
 
     const parsed = parseOCRText(text, type);
@@ -1220,14 +1231,14 @@ async function runOCR(file, type, statusId) {
 
   } catch (err) {
     console.error('OCR error:', err);
-    statusEl.textContent = '璇嗗埆澶辫触锛岃鎵嬪姩濉叆';
+    statusEl.textContent = '识别失败，请手动填入';
     statusEl.className = 'ocr-status error';
   }
 }
 
 function parseOCRText(text, type) {
   // Strategy: remove ALL spaces from the text first, since OCR adds spaces between every character.
-  // "鏈?绱?鏀?鍏?( 纭?鏀?)" 鈫?"鏈堢疮鏀跺叆(纭敹)" 鈥?then exact matching works.
+  // "月 累 收 入 ( 确 收 )" → "月累收入(确收)" — then exact matching works.
   const noSpace = text.replace(/\s+/g, '');
 
   const result = {};
@@ -1250,7 +1261,7 @@ function parseOCRText(text, type) {
       // If there are multiple dots (OCR artifact), keep only the last one as decimal
       const dots = cleaned.match(/\./g);
       if (dots && dots.length > 1) {
-        // "1.035.6" 鈫?remove all dots except the last one 鈫?"1035.6"
+        // "1.035.6" → remove all dots except the last one → "1035.6"
         const lastDot = cleaned.lastIndexOf('.');
         cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
       }
@@ -1309,63 +1320,63 @@ function parseOCRText(text, type) {
 
   if (type === 'thisYear') {
     // Revenue section
-    // "鏈堢疮鏀跺叆(纭敹)" 鈫?first number is 鏈堢疮纭敹
-    result.monthRevenueConfirmed = findNum('鏈堢疮鏀跺叆(纭敹)');
-    // "宸插彂鐢? 1st occurrence 鈫?鏈堢疮鏉冭矗
-    result.monthRevenueAccrual = findNumNth('宸插彂鐢?, 1);
-    // "骞寸疮鏀跺叆(纭敹)" 鈫?first number
-    result.yearRevenueConfirmed = findNum('骞寸疮鏀跺叆(纭敹)');
-    // "宸插彂鐢? 2nd occurrence 鈫?骞寸疮鏉冭矗
-    result.yearRevenueAccrual = findNumNth('宸插彂鐢?, 2);
+    // "月累收入(确收)" → first number is 月累确收
+    result.monthRevenueConfirmed = findNum('月累收入(确收)');
+    // "已发生" 1st occurrence → 月累权责
+    result.monthRevenueAccrual = findNumNth('已发生', 1);
+    // "年累收入(确收)" → first number
+    result.yearRevenueConfirmed = findNum('年累收入(确收)');
+    // "已发生" 2nd occurrence → 年累权责
+    result.yearRevenueAccrual = findNumNth('已发生', 2);
 
     // Indicator table rows
-    // "褰撴棩鏂扮(闂?" 鈫?鏃ョ, 闀跨 (first 2 numbers)
-    const newSign = findAllNums('褰撴棩鏂扮(闂?');
+    // "当日新签(间)" → 日租, 长租 (first 2 numbers)
+    const newSign = findAllNums('当日新签(间)');
     if (newSign.length >= 2) {
       result.dailyNewSignDay = newSign[0];
       result.dailyNewSignLong = newSign[1];
     }
 
-    // "褰撴棩鍦ㄧ(闂?" 鈫?鏃ョ, 闀跨
-    const inRent = findAllNums('褰撴棩鍦ㄧ(闂?');
+    // "当日在租(间)" → 日租, 长租
+    const inRent = findAllNums('当日在租(间)');
     if (inRent.length >= 2) {
       result.dailyInRentDay = inRent[0];
       result.dailyInRentLong = inRent[1];
     }
 
-    // "褰撴棩闂村鍑虹鐜? 鈫?鏃ョ, 闀跨
-    const dailyOcc = findAllNums('褰撴棩闂村鍑虹鐜?);
+    // "当日间夜出租率" → 日租, 长租
+    const dailyOcc = findAllNums('当日间夜出租率');
     if (dailyOcc.length >= 2) {
       result.dailyOccRateDay = dailyOcc[0];
       result.dailyOccRateLong = dailyOcc[1];
     }
 
-    // "鏈堢疮闂村鍑虹鐜? 鈫?鏃ョ, 闀跨
-    const monthOcc = findAllNums('鏈堢疮闂村鍑虹鐜?);
+    // "月累间夜出租率" → 日租, 长租
+    const monthOcc = findAllNums('月累间夜出租率');
     if (monthOcc.length >= 2) {
       result.monthOccRateDay = monthOcc[0];
       result.monthOccRateLong = monthOcc[1];
     }
 
-    // "褰撴棩鏂扮鍧囦环" 鈫?鏃ョ (first number)
-    result.dailyNewAvgPriceDay = findNum('褰撴棩鏂扮鍧囦环');
+    // "当日新签均价" → 日租 (first number)
+    result.dailyNewAvgPriceDay = findNum('当日新签均价');
 
-    // "鏈堢疮绛剧害鍧囦环" 鈫?鏃ョ, 闀跨
-    const monthPrice = findAllNums('鏈堢疮绛剧害鍧囦环');
+    // "月累签约均价" → 日租, 长租
+    const monthPrice = findAllNums('月累签约均价');
     if (monthPrice.length >= 2) {
       result.monthAvgPriceDay = monthPrice[0];
       result.monthAvgPriceLong = monthPrice[1];
     }
 
   } else {
-    // Last year (25骞村悓鏈? 鈥?note: OCR may misread "绱? as "杞?, "绛? as "鏍囩"
+    // Last year (25年同期) — note: OCR may misread "累" as "轩", "签" as "标签"
     // Try multiple keyword variations
-    result.lyMonthRevenueConfirmed = findNum('鏈堢疮鏀跺叆(纭敹)') || findNum('鏈堣僵鏀跺叆(纭敹)');
-    result.lyYearRevenueConfirmed = findNum('骞寸疮鏀跺叆(纭敹)') || findNum('骞磋僵鏀跺叆(纭敹)');
+    result.lyMonthRevenueConfirmed = findNum('月累收入(确收)') || findNum('月轩收入(确收)');
+    result.lyYearRevenueConfirmed = findNum('年累收入(确收)') || findNum('年轩收入(确收)');
 
-    // 鏈堢疮绛剧害鍧囦环 鈫?try variations
-    let monthPrice = findAllNums('鏈堢疮绛剧害鍧囦环');
-    if (monthPrice.length === 0) monthPrice = findAllNums('鏈堟爣绛剧害鍧囦环');
+    // 月累签约均价 → try variations
+    let monthPrice = findAllNums('月累签约均价');
+    if (monthPrice.length === 0) monthPrice = findAllNums('月标签约均价');
     if (monthPrice.length >= 1) result.lyMonthAvgPriceDay = monthPrice[0];
   }
 
@@ -1392,18 +1403,18 @@ function fillFormFromOCR(parsed, type) {
   saveFormData();
   updateOutput();
 
-  const label = type === 'thisYear' ? '浠婂勾' : '25骞村悓鏈?;
+  const label = type === 'thisYear' ? '今年' : '25年同期';
   if (filledCount > 0) {
-    showToast(`鉁?${label}鏁版嵁宸茶瘑鍒?${filledCount} 涓瓧娈碉紝璇锋牳瀵筦);
+    showToast(`✅ ${label}数据已识别 ${filledCount} 个字段，请核对`);
   } else {
-    showToast(`鈿狅笍 ${label}鏈兘璇嗗埆鏈夋晥鏁版嵁锛岃鎵嬪姩濉叆`);
+    showToast(`⚠️ ${label}未能识别有效数据，请手动填入`);
   }
 }
 
 function clearOCR() {
-  document.getElementById('ocrStatusThisYear').textContent = '绛夊緟涓婁紶';
+  document.getElementById('ocrStatusThisYear').textContent = '等待上传';
   document.getElementById('ocrStatusThisYear').className = 'ocr-status idle';
-  document.getElementById('ocrStatusLastYear').textContent = '绛夊緟涓婁紶';
+  document.getElementById('ocrStatusLastYear').textContent = '等待上传';
   document.getElementById('ocrStatusLastYear').className = 'ocr-status idle';
   document.getElementById('previewThisYear').style.display = 'none';
   document.getElementById('previewLastYear').style.display = 'none';
@@ -1413,7 +1424,7 @@ function clearOCR() {
   document.getElementById('fileLastYear').value = '';
 }
 
-// ==================== 宸ュ叿鍑芥暟 ====================
+// ==================== 工具函数 ====================
 
 function debounce(fn, delay) {
   let timer;
@@ -1423,11 +1434,12 @@ function debounce(fn, delay) {
   };
 }
 
-// ==================== 鍚姩 ====================
+// ==================== 启动 ====================
 
 document.addEventListener('DOMContentLoaded', () => {
   init();
-  // 灏濊瘯鎭㈠涓婃濉啓鐨勬暟鎹?  loadFormData();
+  // 尝试恢复上次填写的数据
+  loadFormData();
 
   // Show usage tip on first visit
   if (!localStorage.getItem('xiafei_tip_dismissed')) {
