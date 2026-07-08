@@ -1170,6 +1170,7 @@ function handleThisYearUpload() {
   if (!file) return;
   showPreview('previewThisYear', file);
   document.getElementById('uploadThisYear').classList.add('has-image');
+  clearFields(FIELDS_THIS_YEAR);
   runOCR(file, 'thisYear', 'ocrStatusThisYear');
 }
 
@@ -1178,7 +1179,15 @@ function handleLastYearUpload() {
   if (!file) return;
   showPreview('previewLastYear', file);
   document.getElementById('uploadLastYear').classList.add('has-image');
+  clearFields(FIELDS_LAST_YEAR);
   runOCR(file, 'lastYear', 'ocrStatusLastYear');
+}
+
+function clearFields(fields) {
+  fields.forEach(f => {
+    const el = document.getElementById('inp_' + f.key);
+    if (el) el.value = '';
+  });
 }
 
 function showPreview(imgId, file) {
@@ -1215,15 +1224,15 @@ async function runOCR(file, type, statusId) {
         }
       }
     });
-    const { data: { text } } = await worker.recognize(dataUrl);
+    const { data: { lines } } = await worker.recognize(dataUrl);
     await worker.terminate();
 
-    console.log('OCR raw text (' + type + '):', text);
+    console.log('OCR raw lines (' + type + '):', lines.map(l => l.text));
 
     statusEl.textContent = '识别完成 ✓';
     statusEl.className = 'ocr-status done';
 
-    const parsed = parseOCRText(text, type);
+    const parsed = parseOCRText(lines, type);
     fillFormFromOCR(parsed, type);
 
   } catch (err) {
@@ -1233,159 +1242,176 @@ async function runOCR(file, type, statusId) {
   }
 }
 
-function parseOCRText(text, type) {
-  // Strategy: remove ALL spaces from the text first, since OCR adds spaces between every character.
-  const noSpace = text.replace(/\s+/g, '');
+function parseOCRText(lines, type) {
+  // New strategy: use Tesseract's line/word structure instead of flattening all spaces.
+  // Each line is an object with .text and .words (array of {text, bbox}).
+  // This preserves table columns and avoids "70 3 73" becoming "70373".
 
   const result = {};
 
-  // Helper: normalize OCR common misreads
-  // Returns a regex source string (not a RegExp yet)
-  // OCR common errors: 累→轩, 签→签/釜/锩, 均→勋, 价→仍, 间→问, etc.
-  const normalizeKeyword = (kw) => {
-    // First escape regex special chars except those we intentionally use
-    let s = kw
-      .replace(/\\/g, '\\\\')
-      .replace(/\(/g, '\\(')
-      .replace(/\)/g, '\\)')
-      .replace(/\+/g, '\\+')
-      .replace(/\*/g, '\\*')
-      .replace(/\?/g, '\\?')
-      .replace(/\{/g, '\\{')
-      .replace(/\}/g, '\\}')
-      .replace(/\^/g, '\\^')
-      .replace(/\$/g, '\\$')
-      .replace(/\|/g, '\\|');
-    // Then replace Chinese chars with character classes for OCR tolerance
-    s = s
-      .replace(/累/g, '[累轩]')
-      .replace(/签/g, '[签釜锩]')
-      .replace(/均/g, '[均勋]')
-      .replace(/价/g, '[价仍]')
-      .replace(/间/g, '[间问]')
-      .replace(/收/g, '[收牧]')
-      .replace(/入/g, '[入人]')
-      .replace(/当/g, '[当雪]')
-      .replace(/租/g, '[租祖]')
-      .replace(/长/g, '[长张]')
-      .replace(/新/g, '[新亲]')
-      .replace(/出/g, '[出山]')
-      .replace(/率/g, '[率牵]')
-      .replace(/预/g, '[预顶]')
-      .replace(/算/g, '[算莫]')
-      .replace(/总/g, '[总思]')
-      .replace(/房/g, '[房防]');
-    return s;
+  // Helper: normalize OCR common misreads by replacing likely OCR errors with correct chars
+  const normalizeText = (str) => {
+    return str
+      .replace(/[轩]/g, '累')
+      .replace(/[釜锩]/g, '签')
+      .replace(/[勋]/g, '均')
+      .replace(/[仍]/g, '价')
+      .replace(/[问]/g, '间')
+      .replace(/[牧]/g, '收')
+      .replace(/[人]/g, '入')
+      .replace(/[雪]/g, '当')
+      .replace(/[祖]/g, '租')
+      .replace(/[张]/g, '长')
+      .replace(/[亲]/g, '新')
+      .replace(/[山]/g, '出')
+      .replace(/[牵]/g, '率')
+      .replace(/[顶]/g, '预')
+      .replace(/[莫]/g, '算')
+      .replace(/[思]/g, '总')
+      .replace(/[防]/g, '房');
   };
 
-  // Helper: find first number after a keyword in no-space text (with OCR tolerance)
-  const findNum = (keyword, skipNums = 0) => {
-    const pattern = normalizeKeyword(keyword);
-    const regex = new RegExp(pattern);
-    const match = noSpace.match(regex);
-    if (!match) return null;
-    const idx = match.index;
-    const snippet = noSpace.substring(idx + match[0].length, idx + match[0].length + 120);
-    const numRegex = /([\d,.]+)/g;
-    const matches = [];
-    let m;
-    while ((m = numRegex.exec(snippet)) !== null) {
-      const raw = m[1];
-      let cleaned = raw.replace(/,/g, '');
-      const dots = cleaned.match(/\./g);
-      if (dots && dots.length > 1) {
-        const lastDot = cleaned.lastIndexOf('.');
-        cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
-      }
-      const n = parseFloat(cleaned);
-      if (!isNaN(n)) matches.push(n);
+  // Helper: parse a single word to a number (returns null if not a number)
+  // Tesseract may attach units like "27.1万" or "已发生32.5万" in one word.
+  const parseWord = (text) => {
+    text = text.trim();
+    if (!text || text === '--' || text === '%' || text === '％' || text === '万') return null;
+    const matches = text.match(/[\d,.]+/g);
+    if (!matches || matches.length === 0) return null;
+    let raw = matches[0].replace(/,/g, '');
+    const dots = raw.match(/\./g);
+    if (dots && dots.length > 1) {
+      const lastDot = raw.lastIndexOf('.');
+      raw = raw.substring(0, lastDot).replace(/\./g, '') + raw.substring(lastDot);
     }
-    return skipNums < matches.length ? matches[skipNums] : (matches.length > 0 ? matches[0] : null);
+    const n = parseFloat(raw);
+    return !isNaN(n) && isFinite(n) ? n : null;
   };
 
-  // Helper: find all numbers after a keyword
-  const findAllNums = (keyword, maxNums = 10) => {
-    const pattern = normalizeKeyword(keyword);
-    const regex = new RegExp(pattern);
-    const match = noSpace.match(regex);
-    if (!match) return [];
-    const idx = match.index;
-    const snippet = noSpace.substring(idx + match[0].length, idx + match[0].length + 180);
-    const numRegex = /([\d,.]+)/g;
-    const nums = [];
-    let m;
-    while ((m = numRegex.exec(snippet)) !== null && nums.length < maxNums) {
-      const raw = m[1];
-      let cleaned = raw.replace(/,/g, '');
-      const dots = cleaned.match(/\./g);
-      if (dots && dots.length > 1) {
-        const lastDot = cleaned.lastIndexOf('.');
-        cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
+  // Helper: find line(s) containing keyword(s) (no-space comparison for OCR tolerance)
+  const findLines = (keywords) => {
+    if (typeof keywords === 'string') keywords = [keywords];
+    return lines.filter(line => {
+      const noSpace = normalizeText(line.text).replace(/\s+/g, '');
+      return keywords.some(kw => noSpace.includes(kw));
+    });
+  };
+
+  const findLine = (keywords) => {
+    const matches = findLines(keywords);
+    return matches.length > 0 ? matches[0] : null;
+  };
+
+  // Helper: get words that appear after the keyword in a line
+  const getWordsAfterKeyword = (line, keyword) => {
+    const words = [];
+    let found = false;
+    for (const w of line.words) {
+      const wText = normalizeText(w.text).replace(/\s+/g, '');
+      if (!found) {
+        const idx = wText.indexOf(keyword);
+        if (idx >= 0) {
+          found = true;
+          const remaining = wText.substring(idx + keyword.length);
+          if (remaining) words.push({ text: remaining });
+        }
+      } else {
+        words.push(w);
       }
-      const n = parseFloat(cleaned);
-      if (!isNaN(n)) nums.push(n);
+    }
+    return words;
+  };
+
+  const findMatchingKeyword = (noSpace, keywords) => {
+    if (typeof keywords === 'string') keywords = [keywords];
+    for (const kw of keywords) {
+      if (noSpace.includes(kw)) return kw;
+    }
+    return null;
+  };
+
+  // Get first number after a keyword
+  const findNum = (keywords) => {
+    const line = findLine(keywords);
+    if (!line) return null;
+    const noSpace = normalizeText(line.text).replace(/\s+/g, '');
+    const keyword = findMatchingKeyword(noSpace, keywords);
+    if (!keyword) return null;
+    const wordsAfter = getWordsAfterKeyword(line, keyword);
+    for (const w of wordsAfter) {
+      const n = parseWord(w.text);
+      if (n !== null) return n;
+    }
+    return null;
+  };
+
+  // Get first N numbers after a keyword
+  const findNums = (keywords, count = 3) => {
+    const line = findLine(keywords);
+    if (!line) return [];
+    const noSpace = normalizeText(line.text).replace(/\s+/g, '');
+    const keyword = findMatchingKeyword(noSpace, keywords);
+    if (!keyword) return [];
+    const wordsAfter = getWordsAfterKeyword(line, keyword);
+    const nums = [];
+    for (const w of wordsAfter) {
+      const n = parseWord(w.text);
+      if (n !== null) {
+        nums.push(n);
+        if (nums.length >= count) break;
+      }
     }
     return nums;
   };
 
-  // Helper: find Nth occurrence of a keyword and get numbers after it
-  const findNumNth = (keyword, n, skipNums = 0) => {
-    const pattern = normalizeKeyword(keyword);
-    const regex = new RegExp(pattern, 'g');
-    let match;
-    let lastMatch = null;
-    let count = 0;
-    while ((match = regex.exec(noSpace)) !== null) {
-      count++;
-      if (count === n) { lastMatch = match; break; }
-    }
-    if (!lastMatch) return null;
-    const idx = lastMatch.index;
-    const snippet = noSpace.substring(idx + lastMatch[0].length, idx + lastMatch[0].length + 120);
-    const numRegex = /([\d,.]+)/g;
-    const matches = [];
-    let m;
-    while ((m = numRegex.exec(snippet)) !== null) {
-      const raw = m[1];
-      let cleaned = raw.replace(/,/g, '');
-      const dots = cleaned.match(/\./g);
-      if (dots && dots.length > 1) {
-        const lastDot = cleaned.lastIndexOf('.');
-        cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
+  // Get first number from the Nth line containing keyword
+  const findNumNth = (keyword, n, skip = 0) => {
+    const matches = findLines(keyword);
+    if (matches.length < n) return null;
+    const nums = [];
+    for (const w of matches[n - 1].words) {
+      const text = normalizeText(w.text).replace(/\s+/g, '');
+      const numMatches = text.match(/[\d,.]+/g) || [];
+      for (const raw of numMatches) {
+        let cleaned = raw.replace(/,/g, '');
+        const dots = cleaned.match(/\./g);
+        if (dots && dots.length > 1) {
+          const lastDot = cleaned.lastIndexOf('.');
+          cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
+        }
+        const n2 = parseFloat(cleaned);
+        if (!isNaN(n2) && isFinite(n2)) nums.push(n2);
       }
-      const n2 = parseFloat(cleaned);
-      if (!isNaN(n2)) matches.push(n2);
     }
-    return skipNums < matches.length ? matches[skipNums] : (matches.length > 0 ? matches[0] : null);
+    return nums.length > skip ? nums[skip] : (nums.length > 0 ? nums[0] : null);
   };
 
   if (type === 'thisYear') {
     // Revenue section
     result.monthRevenueConfirmed = findNum('月累收入(确收)');
-
-    // "已发生" → 月累权责 (1st), 年累权责 (2nd)
     result.monthRevenueAccrual = findNumNth('已发生', 1);
+    result.yearRevenueConfirmed = findNum('年累收入(确收)');
     result.yearRevenueAccrual = findNumNth('已发生', 2);
 
-    result.yearRevenueConfirmed = findNum('年累收入(确收)');
+    // Budget targets (from screenshot, not hardcoded)
+    const monthBudget = findNum(['月度预算', '月预算']) || findNum('当月预算');
+    if (monthBudget !== null) {
+      result.budgetMonthConfirmed = monthBudget;
+      result.budgetMonthAccrual = monthBudget;
+    }
 
-    // Extract budget targets from screenshot
-    // "月度预算" or "预算目标" → first number after it
-    let monthBudget = findNum('月度预算') || findNum('月预算') || findNum('当月预算');
-    if (monthBudget !== null) result.budgetMonthConfirmed = monthBudget;
-    result.budgetMonthAccrual = monthBudget;
+    const yearBudget = findNum(['年度预算', '年预算']) || findNum('当年预算');
+    if (yearBudget !== null) {
+      result.budgetYearConfirmed = yearBudget;
+      result.budgetYearAccrual = yearBudget;
+    }
 
-    let yearBudget = findNum('年度预算') || findNum('年预算') || findNum('当年预算');
-    if (yearBudget !== null) result.budgetYearConfirmed = yearBudget;
-    result.budgetYearAccrual = yearBudget;
-
-    // Extract total rooms
-    let totalRooms = findNum('总房间数') || findNum('总[房防]间') || findNum('房间总数');
+    // Total rooms
+    const totalRooms = findNum('总房间数');
     if (totalRooms !== null) result.totalRooms = totalRooms;
 
-    // Indicator table rows
-    // "当日新签(间)" → 日租, 长租, 合计 (first 2-3 numbers)
-    const newSign = findAllNums('当日新签(间)');
+    // Indicator table rows (3 columns: 日租, 长租, 合计)
+    const newSign = findNums('当日新签(间)', 3);
     if (newSign.length >= 2) {
       result.dailyNewSignDay = newSign[0];
       result.dailyNewSignLong = newSign[1];
@@ -1393,8 +1419,7 @@ function parseOCRText(text, type) {
       result.dailyNewSignDay = newSign[0];
     }
 
-    // "当日在租(间)" → 日租, 长租, 合计
-    const inRent = findAllNums('当日在租(间)');
+    const inRent = findNums('当日在租(间)', 3);
     if (inRent.length >= 2) {
       result.dailyInRentDay = inRent[0];
       result.dailyInRentLong = inRent[1];
@@ -1402,8 +1427,7 @@ function parseOCRText(text, type) {
       result.dailyInRentDay = inRent[0];
     }
 
-    // "当日间夜出租率" → 日租, 长租, 合计
-    const dailyOcc = findAllNums('当日间夜出租率');
+    const dailyOcc = findNums('当日间夜出租率', 3);
     if (dailyOcc.length >= 2) {
       result.dailyOccRateDay = dailyOcc[0];
       result.dailyOccRateLong = dailyOcc[1];
@@ -1411,8 +1435,7 @@ function parseOCRText(text, type) {
       result.dailyOccRateDay = dailyOcc[0];
     }
 
-    // "月累间夜出租率" → 日租, 长租, 合计
-    const monthOcc = findAllNums('月累间夜出租率');
+    const monthOcc = findNums('月累间夜出租率', 3);
     if (monthOcc.length >= 2) {
       result.monthOccRateDay = monthOcc[0];
       result.monthOccRateLong = monthOcc[1];
@@ -1420,8 +1443,7 @@ function parseOCRText(text, type) {
       result.monthOccRateDay = monthOcc[0];
     }
 
-    // "当日新签均价" → 日租, 长租, 合计 (may have 2-3 numbers)
-    const dailyPrice = findAllNums('当日新签均价');
+    const dailyPrice = findNums('当日新签均价', 3);
     if (dailyPrice.length >= 2) {
       result.dailyNewAvgPriceDay = dailyPrice[0];
       result.dailyNewAvgPriceLong = dailyPrice[1];
@@ -1429,8 +1451,7 @@ function parseOCRText(text, type) {
       result.dailyNewAvgPriceDay = dailyPrice[0];
     }
 
-    // "月累签约均价" → 日租, 长租, 合计
-    const monthPrice = findAllNums('月累签约均价');
+    const monthPrice = findNums('月累签约均价', 3);
     if (monthPrice.length >= 2) {
       result.monthAvgPriceDay = monthPrice[0];
       result.monthAvgPriceLong = monthPrice[1];
@@ -1439,37 +1460,40 @@ function parseOCRText(text, type) {
     }
 
   } else {
-    // Last year (25年同期) — extract all available fields
+    // Last year (25年同期)
     result.lyMonthRevenueConfirmed = findNum('月累收入(确收)');
-
     result.lyYearRevenueConfirmed = findNum('年累收入(确收)');
 
-    // Also extract operating indicators for 25年同期
-    const newSign = findAllNums('当日新签(间)');
+    const lyMonthAccrual = findNumNth('已发生', 1);
+    const lyYearAccrual = findNumNth('已发生', 2);
+    if (lyMonthAccrual !== null) result.lyMonthRevenueAccrual = lyMonthAccrual;
+    if (lyYearAccrual !== null) result.lyYearRevenueAccrual = lyYearAccrual;
+
+    const newSign = findNums('当日新签(间)', 3);
     if (newSign.length >= 2) {
       result.lyDailyNewSignDay = newSign[0];
       result.lyDailyNewSignLong = newSign[1];
     }
 
-    const inRent = findAllNums('当日在租(间)');
+    const inRent = findNums('当日在租(间)', 3);
     if (inRent.length >= 2) {
       result.lyDailyInRentDay = inRent[0];
       result.lyDailyInRentLong = inRent[1];
     }
 
-    const dailyOcc = findAllNums('当日间夜出租率');
+    const dailyOcc = findNums('当日间夜出租率', 3);
     if (dailyOcc.length >= 2) {
       result.lyDailyOccRateDay = dailyOcc[0];
       result.lyDailyOccRateLong = dailyOcc[1];
     }
 
-    const monthOcc = findAllNums('月累间夜出租率');
+    const monthOcc = findNums('月累间夜出租率', 3);
     if (monthOcc.length >= 2) {
       result.lyMonthOccRateDay = monthOcc[0];
       result.lyMonthOccRateLong = monthOcc[1];
     }
 
-    const dailyPrice = findAllNums('当日新签均价');
+    const dailyPrice = findNums('当日新签均价', 3);
     if (dailyPrice.length >= 2) {
       result.lyDailyNewAvgPriceDay = dailyPrice[0];
       result.lyDailyNewAvgPriceLong = dailyPrice[1];
@@ -1477,7 +1501,7 @@ function parseOCRText(text, type) {
       result.lyDailyNewAvgPriceDay = dailyPrice[0];
     }
 
-    const monthPrice = findAllNums('月累签约均价');
+    const monthPrice = findNums('月累签约均价', 3);
     if (monthPrice.length >= 2) {
       result.lyMonthAvgPriceDay = monthPrice[0];
       result.lyMonthAvgPriceLong = monthPrice[1];
