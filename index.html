@@ -1228,6 +1228,11 @@ async function runOCR(file, type, statusId) {
     await worker.terminate();
 
     console.log('OCR raw lines (' + type + '):', lines.map(l => l.text));
+    console.log('OCR raw words (' + type + '):');
+    lines.forEach((l, i) => {
+      console.log('  Line ' + i + ': "' + l.text + '"');
+      if (l.words) l.words.forEach((w, j) => console.log('    Word ' + j + ': "' + w.text + '"'));
+    });
 
     statusEl.textContent = '识别完成 ✓';
     statusEl.className = 'ocr-status done';
@@ -1250,25 +1255,62 @@ function parseOCRText(lines, type) {
   const result = {};
 
   // Helper: normalize OCR common misreads by replacing likely OCR errors with correct chars
+  // IMPORTANT: only replace chars that are very likely OCR misreads, not common chars like 人/山/出
   const normalizeText = (str) => {
     return str
+      // Bracket normalization: English brackets → Chinese brackets, and common OCR bracket errors
+      .replace(/[\(]/g, '(')
+      .replace(/[)]/g, ')')
+      .replace(/[〔]/g, '(')
+      .replace(/[〕]/g, ')')
+      .replace(/[【]/g, '(')
+      .replace(/[】]/g, ')')
+      .replace(/[[]/g, '(')  // bare [ from OCR
+      // Chinese char OCR misreads (only rare chars that OCR commonly misidentifies)
       .replace(/[轩]/g, '累')
       .replace(/[釜锩]/g, '签')
       .replace(/[勋]/g, '均')
       .replace(/[仍]/g, '价')
-      .replace(/[问]/g, '间')
       .replace(/[牧]/g, '收')
-      .replace(/[人]/g, '入')
-      .replace(/[雪]/g, '当')
       .replace(/[祖]/g, '租')
       .replace(/[张]/g, '长')
       .replace(/[亲]/g, '新')
-      .replace(/[山]/g, '出')
       .replace(/[牵]/g, '率')
       .replace(/[顶]/g, '预')
       .replace(/[莫]/g, '算')
       .replace(/[思]/g, '总')
-      .replace(/[防]/g, '房');
+      .replace(/[防]/g, '房')
+      .replace(/[伐]/g, '代')
+      .replace(/[仪]/g, '议')
+      .replace(/[匝]/g, '月')
+      .replace(/[阡]/g, '千')
+      // Number/letter OCR confusions
+      .replace(/[〇]/g, '0')
+      .replace(/[Ｏ]/g, 'O');
+  };
+
+  // Helper: check if a normalized string matches any keyword (with fallback)
+  // Primary: exact match after normalization
+  // Fallback: match without brackets, or match just the core part
+  const matchesKeyword = (normalizedLine, keywords) => {
+    if (typeof keywords === 'string') keywords = [keywords];
+    // 1. Exact match
+    for (const kw of keywords) {
+      if (normalizedLine.includes(kw)) return kw;
+    }
+    // 2. Fallback: remove brackets from both line and keywords
+    const lineNoBrackets = normalizedLine.replace(/[()]/g, '');
+    for (const kw of keywords) {
+      const kwNoBrackets = kw.replace(/[()]/g, '');
+      if (lineNoBrackets.includes(kwNoBrackets)) return kw;
+    }
+    // 3. Fallback: match just the core Chinese part (remove all non-Chinese)
+    const lineChineseOnly = normalizedLine.replace(/[^\u4e00-\u9fff]/g, '');
+    for (const kw of keywords) {
+      const kwChineseOnly = kw.replace(/[^\u4e00-\u9fff]/g, '');
+      if (kwChineseOnly.length >= 3 && lineChineseOnly.includes(kwChineseOnly)) return kw;
+    }
+    return null;
   };
 
   // Helper: parse a single word to a number (returns null if not a number)
@@ -1288,12 +1330,12 @@ function parseOCRText(lines, type) {
     return !isNaN(n) && isFinite(n) ? n : null;
   };
 
-  // Helper: find line(s) containing keyword(s) (no-space comparison for OCR tolerance)
+  // Helper: find line(s) containing keyword(s) (with fallback matching for OCR tolerance)
   const findLines = (keywords) => {
     if (typeof keywords === 'string') keywords = [keywords];
     return lines.filter(line => {
       const noSpace = normalizeText(line.text).replace(/\s+/g, '');
-      return keywords.some(kw => noSpace.includes(kw));
+      return matchesKeyword(noSpace, keywords) !== null;
     });
   };
 
@@ -1303,31 +1345,72 @@ function parseOCRText(lines, type) {
   };
 
   // Helper: get words that appear after the keyword in a line
+  // Strategy: find which word(s) contain the keyword, then collect all subsequent words.
+  // Also handles the case where keyword spans multiple words or is misread at word level.
   const getWordsAfterKeyword = (line, keyword) => {
     const words = [];
     let found = false;
     for (const w of line.words) {
       const wText = normalizeText(w.text).replace(/\s+/g, '');
       if (!found) {
+        // Try exact match in word
         const idx = wText.indexOf(keyword);
         if (idx >= 0) {
           found = true;
           const remaining = wText.substring(idx + keyword.length);
           if (remaining) words.push({ text: remaining });
+          continue;
+        }
+        // Fallback: try matching without brackets
+        const kwNoBrackets = keyword.replace(/[()]/g, '');
+        const wTextNoBrackets = wText.replace(/[()]/g, '');
+        const idx2 = wTextNoBrackets.indexOf(kwNoBrackets);
+        if (idx2 >= 0) {
+          found = true;
+          // Use original text to get remaining part after the keyword core
+          const remaining = wText.substring(idx2 + kwNoBrackets.length);
+          if (remaining) words.push({ text: remaining });
+          continue;
+        }
+        // Fallback: try Chinese-only match (remove all non-Chinese chars)
+        const kwChineseOnly = keyword.replace(/[^\u4e00-\u9fff]/g, '');
+        const wTextChineseOnly = wText.replace(/[^\u4e00-\u9fff]/g, '');
+        if (kwChineseOnly.length >= 3 && wTextChineseOnly.includes(kwChineseOnly)) {
+          found = true;
+          // After Chinese keyword match, any remaining part of this word + all subsequent words
+          const chIdx = wTextChineseOnly.indexOf(kwChineseOnly);
+          // Estimate position in original text - just skip to next word
+          continue;
         }
       } else {
         words.push(w);
+      }
+    }
+    // If keyword was found in line (by findLine) but not at word level,
+    // fall back to extracting ALL numbers from the line after removing the keyword portion
+    if (!found && line.words) {
+      const lineNorm = normalizeText(line.text).replace(/\s+/g, '');
+      const kwNorm = keyword.replace(/[()]/g, '');
+      const lineNormNoBracket = lineNorm.replace(/[()]/g, '');
+      const matchIdx = lineNormNoBracket.indexOf(kwNorm);
+      if (matchIdx >= 0) {
+        // The keyword exists in the line text. Return all words since we can't pinpoint exact position.
+        // But we need to filter out words that are part of the keyword itself.
+        // Simple heuristic: collect words that contain numbers, skip first few that look like the keyword
+        for (const w of line.words) {
+          const wNorm = normalizeText(w.text).replace(/\s+/g, '');
+          // If this word has a number, include it
+          if (/[\d]/.test(wNorm)) {
+            words.push(w);
+          }
+        }
       }
     }
     return words;
   };
 
   const findMatchingKeyword = (noSpace, keywords) => {
-    if (typeof keywords === 'string') keywords = [keywords];
-    for (const kw of keywords) {
-      if (noSpace.includes(kw)) return kw;
-    }
-    return null;
+    return matchesKeyword(noSpace, keywords);
   };
 
   // Get first number after a keyword
@@ -1342,7 +1425,9 @@ function parseOCRText(lines, type) {
       const n = parseWord(w.text);
       if (n !== null) return n;
     }
-    return null;
+    // Fallback: if getWordsAfterKeyword failed, extract all numbers from line
+    const allNums = findNumsInLine(line);
+    return allNums.length > 0 ? allNums[0] : null;
   };
 
   // Get first N numbers after a keyword
@@ -1361,6 +1446,40 @@ function parseOCRText(lines, type) {
         if (nums.length >= count) break;
       }
     }
+    // Fallback: if we didn't get enough numbers, extract all from line
+    if (nums.length < count) {
+      const allNums = findNumsInLine(line);
+      // Merge without duplicates (preserve order)
+      const merged = [...nums];
+      for (const n of allNums) {
+        if (merged.length >= count) break;
+        if (!merged.includes(n)) merged.push(n);
+      }
+      return merged.slice(0, count);
+    }
+    return nums;
+  };
+
+  // Helper: extract all numbers from a line's words
+  const findNumsInLine = (line) => {
+    const nums = [];
+    if (!line.words) return nums;
+    for (const w of line.words) {
+      const wText = normalizeText(w.text).replace(/\s+/g, '');
+      const numMatches = wText.match(/[\d,.]+/g) || [];
+      for (const raw of numMatches) {
+        let cleaned = raw.replace(/,/g, '');
+        const dots = cleaned.match(/\./g);
+        if (dots && dots.length > 1) {
+          const lastDot = cleaned.lastIndexOf('.');
+          cleaned = cleaned.substring(0, lastDot).replace(/\./g, '') + cleaned.substring(lastDot);
+        }
+        const n = parseFloat(cleaned);
+        if (!isNaN(n) && isFinite(n)) nums.push(n);
+      }
+    }
+    return nums;
+  };
     return nums;
   };
 
