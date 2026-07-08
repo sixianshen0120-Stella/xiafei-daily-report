@@ -582,6 +582,7 @@ const FIELDS_THIS_YEAR = [
 
 const FIELDS_LAST_YEAR = [
   { key: 'lyMonthRevenueConfirmed', label: '月累收入-确收(万)', step: '0.1' },
+  { key: 'lyMonthRevenueAccrual', label: '月累收入-权责(万)', step: '0.1' },
   { key: 'lyYearRevenueConfirmed', label: '年累收入-确收(万)', step: '0.1' },
   { key: 'lyMonthAvgPriceDay', label: '日租-月累签约均价(元)', step: '1' },
 ];
@@ -797,6 +798,8 @@ function calculate(data) {
 
   // 收入同店同比 = 今年年累确收 / 25年同期年累确收 - 1
   const yoyRevenue = ly.lyYearRevenueConfirmed > 0 ? ((d.yearRevenueConfirmed / ly.lyYearRevenueConfirmed - 1) * 100) : 0;
+  // 权责收入同店同比 = 今年月累权责 / 25年同期月累权责 - 1
+  const yoyRevenueAccrual = ly.lyMonthRevenueAccrual > 0 ? ((d.monthRevenueAccrual / ly.lyMonthRevenueAccrual - 1) * 100) : 0;
 
   // 经营指标
   const dailyNewSignDay = Math.max(0, (d.dailyNewSignDay || 0) - (m.renewDay || 0));
@@ -840,7 +843,9 @@ function calculate(data) {
     accrualMonthRate: accrualMonthRate.toFixed(1),
     accrualYearRate: accrualYearRate.toFixed(1),
     lyMonthRevenueConfirmed: ly.lyMonthRevenueConfirmed,
+    lyMonthRevenueAccrual: ly.lyMonthRevenueAccrual,
     yoyRevenue: yoyRevenue.toFixed(1),
+    yoyRevenueAccrual: yoyRevenueAccrual.toFixed(1),
     timeProgress: timeProgress.toFixed(1),
 
     dailyNewSignDay,
@@ -940,8 +945,8 @@ function renderIncomeTable(c) {
         <td>${c.yearBudgetAccrual}</td>
         <td class="highlight">${c.yearRevenueAccrual}</td>
         <td class="${rateClass(c.accrualYearRate)}">${fmtPct(c.accrualYearRate)}</td>
-        <td class="empty-cell">—</td>
-        <td class="empty-cell">—</td>
+        <td>${c.lyMonthRevenueAccrual}</td>
+        <td class="${yoyClass(c.yoyRevenueAccrual)}">${c.yoyRevenueAccrual}%</td>
       </tr>
     </tbody>`;
 }
